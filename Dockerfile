@@ -16,5 +16,5 @@ COPY . .
 
 EXPOSE 8004
 
-CMD ["uvicorn", "src.api.server:app", "--host", "0.0.0.0", "--port", "8004"]
+CMD sh -c "uvicorn src.api.server:app --host 0.0.0.0 --port ${PORT:-8004}"
 
