@@ -1,0 +1,9 @@
+# Git Ignore for FinPlus+ Personal Wealth & Accounting (APP-05)
+.env
+*.env
+config/.env
+logs/
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/

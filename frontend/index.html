@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinPlus+ Personal Wealth & Accounting Engine | App #5</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #0d1527 0%, #060911 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    .nav-btn.active {
+      color: #06b6d4;
+      border-bottom: 2px solid #06b6d4;
+    }
+
+    .mobile-tab.active {
+      color: #06b6d4;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.85);
+      }
+    }
+
+    .t-account-table th,
+    .t-account-table td {
+      padding: 0.5rem 0.75rem;
+    }
+  </style>
+</head>
+
+<body class="p-3 md:p-6 pb-24 md:pb-10 max-w-7xl mx-auto space-y-4">
+
+  <!-- TOP HEADER / BRAND / STATUS BAR -->
+  <header class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-4">
+    <div class="flex items-center gap-3">
+      <div
+        class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 font-extrabold text-black text-xl mono">
+        ₹5
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-lg md:text-xl font-extrabold tracking-tight text-white">FinPlus+ Personal Wealth & Accounting
+          </h1>
+          <span
+            class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30 mono">APP
+            #5 • PORT 8004</span>
+        </div>
+        <p class="text-xs text-slate-400">Double-Entry Ledger • Classified Balance Sheet • AMFI Live MFs • 22K Gold
+          Sub-Ledger • 2-Way Loans</p>
+      </div>
+    </div>
+
+    <!-- QUICK ACTION BUTTONS -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="openCreateAccountModal()"
+        class="flex items-center gap-1 px-3 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs hover:bg-emerald-500/30 active:scale-95 transition">
+        <span class="text-base leading-none">＋</span> Account
+      </button>
+      <button onclick="openVoucherModal()"
+        class="flex items-center gap-1 px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold text-xs shadow-lg shadow-cyan-500/25 active:scale-95 transition">
+        <span class="text-base leading-none">＋</span> Voucher
+      </button>
+      <button onclick="openAddMFModal()"
+        class="flex items-center gap-1 px-3 py-2 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 font-bold text-xs hover:bg-purple-500/30 active:scale-95 transition">
+        <span class="text-base leading-none">＋</span> MF Scheme
+      </button>
+    </div>
+  </header>
+
+  <!-- ACCOUNTING SUMMARY HUD CARDS -->
+  <section class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+    <div
+      class="glass-card p-3 md:p-4 border-cyan-500/30 bg-gradient-to-br from-cyan-950/20 to-transparent col-span-2 md:col-span-1">
+      <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+        <span>Owner's Equity</span>
+        <span class="text-cyan-400 font-bold mono">A - L</span>
+      </div>
+      <div class="text-xl md:text-2xl font-extrabold text-white mono mt-1" id="hud-equity">Loading...</div>
+      <div class="text-[10px] text-emerald-400 font-bold mono mt-0.5" id="hud-equity-sub">Balanced & Verified</div>
+    </div>
+
+    <div class="glass-card p-3 md:p-4">
+      <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+        <span>Total Assets</span>
+        <span class="text-emerald-400 font-bold mono">Debit (Dr)</span>
+      </div>
+      <div class="text-base md:text-lg font-bold text-emerald-400 mono mt-1" id="hud-assets">Loading...</div>
+      <div class="text-[10px] text-slate-400 mt-0.5">Current + MF + Gold</div>
+    </div>
+
+    <div onclick="switchTab('mutualfunds')"
+      class="glass-card p-3 md:p-4 border-purple-500/30 cursor-pointer active:scale-98 transition">
+      <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+        <span class="text-purple-400 font-bold">Mutual Funds</span>
+        <span class="pulse-dot"></span>
+      </div>
+      <div class="text-base md:text-lg font-bold text-purple-300 mono mt-1" id="hud-mf-val">Loading...</div>
+      <div class="text-[10px] text-emerald-400 font-bold mono mt-0.5" id="hud-mf-ret">Live AMFI NAV</div>
+    </div>
+
+    <div class="glass-card p-3 md:p-4">
+      <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+        <span>Net Period Surplus</span>
+        <span class="text-cyan-300 font-bold mono">P&L Profit</span>
+      </div>
+      <div class="text-base md:text-lg font-bold text-cyan-300 mono mt-1" id="hud-surplus">Loading...</div>
+      <div class="text-[10px] text-slate-400 mt-0.5">Income - Expenses</div>
+    </div>
+
+    <div class="glass-card p-3 md:p-4 border-emerald-500/30">
+      <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+        <span>Trial Balance</span>
+        <span class="text-emerald-400 font-bold mono">Ind AS</span>
+      </div>
+      <div class="text-sm font-bold text-emerald-400 mono mt-1" id="hud-tb-status">Σ Dr == Σ Cr</div>
+      <div class="text-[10px] text-slate-400 mono mt-0.5" id="hud-tb-amount">Balanced</div>
+    </div>
+  </section>
+
+  <!-- TRADING JOURNAL SYNC STRIP (APP #4 REAL TRADES ONLY) -->
+  <section
+    class="glass-card p-3 md:p-4 border-cyan-500/20 bg-gradient-to-r from-slate-900 via-cyan-950/20 to-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-sm">
+        ⚡
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-white">App #4 Journal Live Bridge</span>
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-bold mono">REAL TRADES
+            ONLY</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Syncs net in-hand P&L from App #4 journal.db into Account 1140 (Margin) &
+          4210 (Other Income).</p>
+      </div>
+    </div>
+
+    <div
+      class="flex items-center justify-between md:justify-end gap-3 text-xs border-t md:border-t-0 pt-2 md:pt-0 border-white/5">
+      <div>
+        <span class="text-[9px] text-slate-400 uppercase block">Other Income (MTD)</span>
+        <span class="text-xs font-bold text-emerald-400 mono" id="strip-trading-pnl">₹0.00</span>
+      </div>
+      <div class="h-6 w-px bg-white/10 hidden md:block"></div>
+      <div>
+        <span class="text-[9px] text-slate-400 uppercase block">1140 Margin Asset</span>
+        <span class="text-xs font-bold text-cyan-400 mono" id="strip-trading-margin">₹0.00</span>
+      </div>
+      <button onclick="syncTradingBridge()"
+        class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-[10px] mono">
+        🔄 Sync
+      </button>
+    </div>
+  </section>
+
+  <!-- DESKTOP NAVIGATION TABS -->
+  <nav class="hidden md:flex items-center gap-3 border-b border-white/10 text-xs font-semibold overflow-x-auto pb-1">
+    <button onclick="switchTab('balancesheet')" id="dtab-balancesheet"
+      class="nav-btn active pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>🏛️</span> Balance Sheet
+    </button>
+    <button onclick="switchTab('chartofaccounts')" id="dtab-chartofaccounts"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>📋</span> Chart of Accounts
+    </button>
+    <button onclick="switchTab('mutualfunds')" id="dtab-mutualfunds"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>📈</span> Mutual Funds & Alerts
+    </button>
+    <button onclick="switchTab('pnl')" id="dtab-pnl"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>📊</span> Income & Expense (P&L)
+    </button>
+    <button onclick="switchTab('journal')" id="dtab-journal"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>📖</span> General Journal
+    </button>
+    <button onclick="switchTab('ledger')" id="dtab-ledger"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>📑</span> General Ledger
+    </button>
+    <button onclick="switchTab('trialbalance')" id="dtab-trialbalance"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>⚖️</span> Trial Balance
+    </button>
+    <button onclick="switchTab('gold_loans')" id="dtab-gold_loans"
+      class="nav-btn pb-3 text-slate-300 hover:text-white transition flex items-center gap-1">
+      <span>🪙</span> Gold & 2-Way Loans
+    </button>
+  </nav>
+
+  <!-- ==================== TAB 1: CLASSIFIED BALANCE SHEET ==================== -->
+  <div id="view-balancesheet" class="tab-pane flex flex-col gap-4">
+    <div class="glass-card p-4 md:p-5">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Classified Balance Sheet</h2>
+          <p class="text-[11px] text-slate-400">Statement of Financial Position (Live SQLite Data)</p>
+        </div>
+        <span class="text-[10px] text-emerald-400 font-bold mono bg-emerald-500/10 px-2 py-1 rounded"
+          id="bs-status-badge">Assets = Liabilities + Equity</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+        <div class="space-y-4">
+          <div class="flex justify-between items-center border-b border-emerald-500/30 pb-1">
+            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">I. ASSETS</h3>
+            <span class="font-bold text-emerald-400 mono" id="bs-tot-assets">Loading...</span>
+          </div>
+          <div id="bs-assets-container" class="space-y-3"></div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex justify-between items-center border-b border-rose-500/30 pb-1">
+            <h3 class="text-xs font-bold text-rose-400 uppercase tracking-wider">II. LIABILITIES</h3>
+            <span class="font-bold text-rose-400 mono" id="bs-tot-liab">Loading...</span>
+          </div>
+          <div id="bs-liab-container" class="space-y-2"></div>
+
+          <div class="pt-3 border-t border-cyan-500/30">
+            <div class="flex justify-between items-center pb-1">
+              <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">III. OWNER'S EQUITY (NET WORTH)</h3>
+              <span class="font-bold text-cyan-400 mono" id="bs-tot-equity">Loading...</span>
+            </div>
+            <div id="bs-equity-container" class="space-y-1.5 pl-2 border-l border-white/10 mt-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 2: CHART OF ACCOUNTS (COA) ==================== -->
+  <div id="view-chartofaccounts" class="tab-pane hidden flex flex-col gap-4">
+    <div class="glass-card p-4 md:p-5">
+      <!-- HEADER -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-3 mb-4 gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Chart of Accounts (COA)</h2>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-bold mono"
+              id="coa-total-count">21 Accounts</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Master double-entry ledger classification: 1000 Assets, 2000
+            Liabilities, 3000 Equity, 4000 Income, 5000 Expenses</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openCreateAccountModal()"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-black hover:bg-emerald-400 transition flex items-center gap-1 shadow-lg shadow-emerald-500/20">
+            <span>＋</span> Create Custom Account
+          </button>
+        </div>
+      </div>
+
+      <!-- COA SUMMARY COUNTERS -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-4">
+        <div onclick="filterCOA('ASSET')"
+          class="p-2.5 rounded-xl bg-slate-900 border border-emerald-500/30 cursor-pointer hover:bg-emerald-950/20 transition">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+            <span class="text-emerald-400 font-bold">1000 Assets</span>
+            <span class="text-[9px] px-1 rounded bg-emerald-500/10 text-emerald-400 mono">Dr</span>
+          </div>
+          <div class="text-base font-bold text-white mono mt-1" id="coa-count-asset">0 Accounts</div>
+          <span class="text-[10px] text-slate-400">Liquid, MF, Gold, Real Estate</span>
+        </div>
+
+        <div onclick="filterCOA('LIABILITY')"
+          class="p-2.5 rounded-xl bg-slate-900 border border-rose-500/30 cursor-pointer hover:bg-rose-950/20 transition">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+            <span class="text-rose-400 font-bold">2000 Liabilities</span>
+            <span class="text-[9px] px-1 rounded bg-rose-500/10 text-rose-400 mono">Cr</span>
+          </div>
+          <div class="text-base font-bold text-white mono mt-1" id="coa-count-liab">0 Accounts</div>
+          <span class="text-[10px] text-slate-400">Credit Cards, Loans, Mortgages</span>
+        </div>
+
+        <div onclick="filterCOA('EQUITY')"
+          class="p-2.5 rounded-xl bg-slate-900 border border-cyan-500/30 cursor-pointer hover:bg-cyan-950/20 transition">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+            <span class="text-cyan-400 font-bold">3000 Equity</span>
+            <span class="text-[9px] px-1 rounded bg-cyan-500/10 text-cyan-400 mono">Cr</span>
+          </div>
+          <div class="text-base font-bold text-white mono mt-1" id="coa-count-equity">0 Accounts</div>
+          <span class="text-[10px] text-slate-400">Owner Capital, Retained Surplus</span>
+        </div>
+
+        <div onclick="filterCOA('INCOME')"
+          class="p-2.5 rounded-xl bg-slate-900 border border-sky-500/30 cursor-pointer hover:bg-sky-950/20 transition">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+            <span class="text-sky-400 font-bold">4000 Income</span>
+            <span class="text-[9px] px-1 rounded bg-sky-500/10 text-sky-400 mono">Cr</span>
+          </div>
+          <div class="text-base font-bold text-white mono mt-1" id="coa-count-income">0 Accounts</div>
+          <span class="text-[10px] text-slate-400">Salary, Realized Trading, Dividends</span>
+        </div>
+
+        <div onclick="filterCOA('EXPENSE')"
+          class="p-2.5 rounded-xl bg-slate-900 border border-amber-500/30 cursor-pointer hover:bg-amber-950/20 transition">
+          <div class="flex justify-between items-center text-[10px] text-slate-400 uppercase">
+            <span class="text-amber-400 font-bold">5000 Expenses</span>
+            <span class="text-[9px] px-1 rounded bg-amber-500/10 text-amber-400 mono">Dr</span>
+          </div>
+          <div class="text-base font-bold text-white mono mt-1" id="coa-count-expense">0 Accounts</div>
+          <span class="text-[10px] text-slate-400">Living, Interest, Subscriptions</span>
+        </div>
+      </div>
+
+      <!-- FILTER PILLS & SEARCH BAR -->
+      <div
+        class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 bg-slate-900/60 p-2.5 rounded-xl border border-white/5">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" id="coa-filter-pills">
+          <button onclick="filterCOA('ALL')" id="coa-pill-ALL"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500 text-black">All Accounts</button>
+          <button onclick="filterCOA('ASSET')" id="coa-pill-ASSET"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white">Assets
+            (1000s)</button>
+          <button onclick="filterCOA('LIABILITY')" id="coa-pill-LIABILITY"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white">Liabilities
+            (2000s)</button>
+          <button onclick="filterCOA('EQUITY')" id="coa-pill-EQUITY"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white">Equity
+            (3000s)</button>
+          <button onclick="filterCOA('INCOME')" id="coa-pill-INCOME"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white">Income
+            (4000s)</button>
+          <button onclick="filterCOA('EXPENSE')" id="coa-pill-EXPENSE"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white">Expenses
+            (5000s)</button>
+        </div>
+        <div class="relative">
+          <input type="text" id="coa-search-input" oninput="searchCOA()" placeholder="Search code or account title..."
+            class="bg-slate-950 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 w-full md:w-64 outline-none focus:border-cyan-400 mono">
+        </div>
+      </div>
+
+      <!-- MASTER ACCOUNTS TABLE -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-white/10 uppercase mono text-[10px]">
+            <tr>
+              <th class="py-2.5 px-3">Account Code</th>
+              <th class="py-2.5 px-3">Account Title & Description</th>
+              <th class="py-2.5 px-3">Class</th>
+              <th class="py-2.5 px-3">Classification Sub-Type</th>
+              <th class="py-2.5 px-3 text-center">Normal Rule</th>
+              <th class="py-2.5 px-3 text-right">Current Balance ₹</th>
+              <th class="py-2.5 px-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="coa-table-body" class="divide-y divide-white/5 text-slate-200">
+            <tr>
+              <td colspan="7" class="text-center py-6 text-slate-400">Loading Chart of Accounts...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 3: MUTUAL FUNDS & ALERTS ==================== -->
+  <div id="view-mutualfunds" class="tab-pane hidden flex flex-col gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div class="glass-card p-3 border-purple-500/30 bg-purple-950/20">
+        <span class="text-[10px] text-slate-400 uppercase">Total Net Investment</span>
+        <div class="text-lg md:text-xl font-bold text-white mono mt-1" id="mf-tot-invested">Loading...</div>
+        <span class="text-[10px] text-slate-400">Principal Cost Basis</span>
+      </div>
+
+      <div class="glass-card p-3 border-purple-500/30 bg-purple-950/20">
+        <span class="text-[10px] text-slate-400 uppercase">Current Market Valuation</span>
+        <div class="text-lg md:text-xl font-extrabold text-purple-300 mono mt-1" id="mf-tot-current">Loading...</div>
+        <span class="text-[10px] text-slate-400">AMFI Live Daily NAV</span>
+      </div>
+
+      <div class="glass-card p-3 border-emerald-500/30 bg-emerald-950/20">
+        <span class="text-[10px] text-slate-400 uppercase">Unrealized Net Profit</span>
+        <div class="text-lg md:text-xl font-extrabold text-emerald-400 mono mt-1" id="mf-tot-pnl">Loading...</div>
+        <span class="text-[10px] text-emerald-400 font-bold mono" id="mf-tot-return">Absolute Return</span>
+      </div>
+
+      <div class="glass-card p-3 border-cyan-500/30 bg-cyan-950/20">
+        <span class="text-[10px] text-slate-400 uppercase">Active Schemes</span>
+        <div class="text-lg md:text-xl font-bold text-cyan-300 mono mt-1" id="mf-schemes-count">0 Funds</div>
+        <span class="text-[10px] text-cyan-400 font-bold mono">AMFI Auto-Tracked</span>
+      </div>
+    </div>
+
+    <!-- HOLDINGS TABLE -->
+    <div class="glass-card p-4 md:p-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-3 mb-3 gap-2">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Mutual Fund Folio Holdings</h2>
+          <p class="text-[11px] text-slate-400">Official daily closing NAVs from AMFI (Updated every evening at 21:00
+            IST)</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="refreshLiveAMFINAVs()"
+            class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-white/10 hover:text-white transition flex items-center gap-1">
+            <span>🔄</span> Sync AMFI NAVs
+          </button>
+          <button onclick="openAddMFModal()"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-500 text-white hover:bg-purple-400 transition">
+            ＋ Add Fund
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-white/10 uppercase mono text-[10px]">
+            <tr>
+              <th class="py-2.5 px-3">Fund Scheme & AMFI Code</th>
+              <th class="py-2.5 px-3">Category</th>
+              <th class="py-2.5 px-3 text-right">Units</th>
+              <th class="py-2.5 px-3 text-right">Avg NAV ₹</th>
+              <th class="py-2.5 px-3 text-right text-purple-300">Live AMFI NAV ₹</th>
+              <th class="py-2.5 px-3 text-right">Invested ₹</th>
+              <th class="py-2.5 px-3 text-right text-white">Current ₹</th>
+              <th class="py-2.5 px-3 text-right text-emerald-400">Profit/Loss (Return)</th>
+            </tr>
+          </thead>
+          <tbody id="mf-holdings-tbody" class="divide-y divide-white/5 text-slate-200">
+            <tr>
+              <td colspan="8" class="text-center py-4 text-slate-400">Loading portfolio from SQLite...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DAILY ALERTS HUB -->
+    <div class="glass-card p-4 md:p-5 border-cyan-500/30">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔔</span>
+          <div>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Automated Daily NTFY Push Alerts</h3>
+            <p class="text-[11px] text-slate-400">Dispatches real-time alerts to topic <code
+                class="text-cyan-400">finplus_wealth_alerts_2026</code></p>
+          </div>
+        </div>
+        <button onclick="testNTFYAlert()"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition">
+          Test Push Alert 📲
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <div class="p-3 rounded-xl bg-slate-900 border border-white/10">
+          <span class="font-bold text-white block mb-1">1. Daily 21:15 IST Briefing</span>
+          <p class="text-[10px] text-slate-400">Dispatches portfolio MTM valuation, daily swing, and closing NAVs.</p>
+          <span class="text-[9px] text-emerald-400 font-bold mono block mt-2">ACTIVE</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900 border border-white/10">
+          <span class="font-bold text-white block mb-1">2. SIP Debit Reminders</span>
+          <p class="text-[10px] text-slate-400">Alerts 2 days prior to bank debit dates to verify sufficient balance.
+          </p>
+          <span class="text-[9px] text-cyan-400 font-bold mono block mt-2">ACTIVE</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900 border border-white/10">
+          <span class="font-bold text-white block mb-1">3. Market Dip Buy Trigger</span>
+          <p class="text-[10px] text-slate-400">Triggers when Nifty drops > 1.5% from App #1 breadth for lumpsum top-up.
+          </p>
+          <span class="text-[9px] text-amber-400 font-bold mono block mt-2">ACTIVE</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900 border border-white/10">
+          <span class="font-bold text-white block mb-1">4. Milestone Radar</span>
+          <p class="text-[10px] text-slate-400">Dispatches push notifications when portfolio crosses target milestones.
+          </p>
+          <span class="text-[9px] text-purple-400 font-bold mono block mt-2">ACTIVE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 4: INCOME & EXPENSE (P&L) ==================== -->
+  <div id="view-pnl" class="tab-pane hidden flex flex-col gap-4">
+    <div class="glass-card p-4 md:p-5">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Income & Expense Statement (P&L)</h2>
+          <p class="text-[11px] text-slate-400">Profit & Loss Statement for the period</p>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400 uppercase block">Savings Rate</span>
+          <span class="text-sm font-extrabold text-cyan-400 mono" id="pnl-savings-rate">0.0%</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+        <div class="space-y-3">
+          <div class="flex justify-between items-center border-b border-cyan-500/30 pb-1">
+            <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">A. REVENUES & INCOMES (Cr)</h3>
+            <span class="font-bold text-cyan-400 mono" id="pnl-tot-income">₹0.00</span>
+          </div>
+          <div id="pnl-income-list" class="space-y-2"></div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex justify-between items-center border-b border-rose-500/30 pb-1">
+            <h3 class="text-xs font-bold text-rose-400 uppercase tracking-wider">B. EXPENSES & LOSSES (Dr)</h3>
+            <span class="font-bold text-rose-400 mono" id="pnl-tot-expense">₹0.00</span>
+          </div>
+          <div id="pnl-expense-list" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-slate-950 border border-cyan-500/30 flex justify-between items-center text-xs mt-4">
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase">NET PERIOD SURPLUS</span>
+          <div class="text-xl md:text-2xl font-extrabold text-cyan-300 mono mt-0.5" id="pnl-net-surplus">₹0.00</div>
+        </div>
+        <span class="text-[11px] text-slate-400 mono">Credited to Retained Surplus (Equity)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 5: GENERAL JOURNAL ==================== -->
+  <div id="view-journal" class="tab-pane hidden flex flex-col gap-4">
+    <div class="glass-card p-4 md:p-5">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">General Journal</h2>
+          <p class="text-[11px] text-slate-400">Chronological double-entry audit trail from SQLite</p>
+        </div>
+        <button onclick="openVoucherModal()"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition">
+          ＋ Add Journal Voucher
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-white/10 uppercase mono text-[10px]">
+            <tr>
+              <th class="py-2.5 px-3">Date & Voucher #</th>
+              <th class="py-2.5 px-3">Account Title & Narration</th>
+              <th class="py-2.5 px-3 text-center">Type</th>
+              <th class="py-2.5 px-3 text-right">Debit (Dr) ₹</th>
+              <th class="py-2.5 px-3 text-right">Credit (Cr) ₹</th>
+            </tr>
+          </thead>
+          <tbody id="journal-tbody" class="divide-y divide-white/5 text-slate-200">
+            <tr>
+              <td colspan="5" class="text-center py-4 text-slate-400">Loading journal vouchers...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 6: GENERAL LEDGER ==================== -->
+  <div id="view-ledger" class="tab-pane hidden flex flex-col gap-4">
+    <div class="glass-card p-4 md:p-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-3 mb-3 gap-2">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">General Ledger (T-Account Explorer)</h2>
+          <p class="text-[11px] text-slate-400">Inspect individual ledger accounts & running balance</p>
+        </div>
+        <select id="ledger-account-select" onchange="loadLedger()"
+          class="bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs outline-none focus:border-cyan-400">
+          <option value="1110">1110 - HDFC Bank Savings Account</option>
+        </select>
+      </div>
+
+      <div class="p-3 rounded-lg bg-slate-950 border border-white/10 flex justify-between items-center text-xs mb-3">
+        <div>
+          <div class="font-bold text-white text-sm" id="ledger-acc-name">Loading...</div>
+          <div class="text-[10px] text-slate-400" id="ledger-acc-cat">T-Account</div>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] text-slate-400 uppercase block">Closing Ledger Balance</span>
+          <span class="text-lg font-bold text-emerald-400 mono" id="ledger-closing-bal">₹0.00</span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs t-account-table">
+          <thead class="text-slate-400 border-b border-white/10 uppercase mono text-[10px]">
+            <tr>
+              <th>Date</th>
+              <th>Voucher #</th>
+              <th>Counterpart / Narration</th>
+              <th class="text-right text-emerald-400">Debit (Dr)</th>
+              <th class="text-right text-rose-400">Credit (Cr)</th>
+              <th class="text-right">Running Balance</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-entries-tbody" class="divide-y divide-white/5 text-slate-200">
+            <tr>
+              <td colspan="6" class="text-center py-4 text-slate-400">Select an account to load T-Account ledger.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 7: TRIAL BALANCE ==================== -->
+  <div id="view-trialbalance" class="tab-pane hidden flex flex-col gap-4">
+    <div class="glass-card p-4 md:p-5">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3 mb-3">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider">Trial Balance</h2>
+          <p class="text-[11px] text-slate-400">Mathematical proof of debit-credit equality (Ind AS / Double-Entry Rule)
+          </p>
+        </div>
+        <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-bold mono"
+          id="tb-status-badge">STATUS: BALANCED</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-white/10 uppercase mono text-[10px]">
+            <tr>
+              <th class="py-2.5 px-3">Account Code & Name</th>
+              <th class="py-2.5 px-3">Classification</th>
+              <th class="py-2.5 px-3 text-right">Debit Balance (Dr) ₹</th>
+              <th class="py-2.5 px-3 text-right">Credit Balance (Cr) ₹</th>
+            </tr>
+          </thead>
+          <tbody id="trial-balance-tbody" class="divide-y divide-white/5 text-slate-200"></tbody>
+          <tfoot class="border-t-2 border-white/20 font-bold mono text-xs text-white">
+            <tr>
+              <td class="py-3 px-3 uppercase" colspan="2">TOTAL TRIAL BALANCE:</td>
+              <td class="py-3 px-3 text-right text-emerald-400" id="tb-tot-dr">₹0.00</td>
+              <td class="py-3 px-3 text-right text-rose-400" id="tb-tot-cr">₹0.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 8: GOLD & TWO-WAY LOANS ==================== -->
+  <div id="view-gold_loans" class="tab-pane hidden flex flex-col gap-4">
+    <!-- GOLD HOLDING CARD -->
+    <div class="glass-card p-4 md:p-5 border-amber-500/30">
+      <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-3 mb-4 gap-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🪙</span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Physical 22K Gold Sub-Ledger</h3>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-bold mono">ACCOUNT
+              1230</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Formula: Grams × 22K Rate/g minus mandatory 23% pledge/depreciation
+            haircut</p>
+        </div>
+        <a href="https://www.goodreturns.in/gold-rates/kerala.html" target="_blank"
+          class="text-xs text-amber-400 hover:text-amber-300 underline mono flex items-center gap-1">
+          <span>Goodreturns Kerala Rates</span> ↗
+        </a>
+      </div>
+
+      <!-- KERALA GOODRETURNS LIVE REFERENCE BENCHMARK -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 mb-4 text-xs">
+        <div class="p-3 rounded-xl bg-slate-900 border border-white/10">
+          <span class="text-[10px] text-slate-400 uppercase block">24 Karat Gold (99.9% Purity)</span>
+          <div class="text-lg font-bold text-white mono mt-1">₹14,461 <span
+              class="text-[11px] font-normal text-slate-400">/ gram</span></div>
+          <span class="text-[9px] text-slate-500">Benchmark pure bullion bar</span>
+        </div>
+        <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-500/40">
+          <div class="flex justify-between items-center text-[10px] text-amber-300 font-bold uppercase">
+            <span>22 Karat Gold (91.6% Purity)</span>
+            <span class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 mono text-[9px]">ACTIVE BASE</span>
+          </div>
+          <div class="text-lg font-extrabold text-amber-300 mono mt-1">₹13,256 <span
+              class="text-[11px] font-normal text-amber-200">/ gram</span></div>
+          <span class="text-[9px] text-emerald-400 font-bold">Goodreturns Kerala Rate</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900 border border-white/10">
+          <span class="text-[10px] text-slate-400 uppercase block">18 Karat Gold</span>
+          <div class="text-lg font-bold text-slate-300 mono mt-1">₹10,846 <span
+              class="text-[11px] font-normal text-slate-400">/ gram</span></div>
+          <span class="text-[9px] text-slate-500">Reference standard</span>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE VALUATION CONTROLS -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs bg-slate-950/60 p-4 rounded-xl border border-white/5">
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Holding Weight (Grams)</label>
+          <input type="number" id="gl-gold-grams" oninput="calcGoldLive()" step="0.1" value="0"
+            class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-base font-bold text-amber-300 mono outline-none focus:border-amber-400">
+          <span class="text-[10px] text-slate-400 mt-1 block" id="gl-gold-pavan">0.0 Pavan (1 Pavan = 8g)</span>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">22K Market Rate / Gram (₹)</label>
+          <input type="number" id="gl-gold-rate" oninput="calcGoldLive()" step="1" value="13256"
+            class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-base font-bold text-white mono outline-none focus:border-amber-400">
+          <span class="text-[10px] text-emerald-400 mt-1 block">Goodreturns Kerala Verified</span>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Gross Market Valuation</label>
+          <div class="text-base font-bold text-slate-300 mono mt-2" id="gl-gold-gross">₹0.00</div>
+          <span class="text-[10px] text-rose-400 mt-1 block" id="gl-gold-haircut-amt">-₹0.00 (23% pledge
+            margin)</span>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-1">Recognized Asset Value (Net)</label>
+          <div class="text-xl font-extrabold text-amber-300 mono mt-1" id="gl-gold-net">₹0.00</div>
+          <span class="text-[10px] text-emerald-400 mt-1 block font-bold">Debited to Account 1230</span>
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-4">
+        <button onclick="saveGoldValuation()"
+          class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 shadow-lg shadow-amber-500/20 transition">
+          Update Gold Value in SQLite
+        </button>
+      </div>
+    </div>
+
+    <!-- TWO-WAY LOAN CALCULATOR & SUB-LEDGER -->
+    <div class="glass-card p-4 md:p-5 border-rose-500/30">
+      <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-white/10 pb-3 mb-4 gap-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">💳</span>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider">Two-Way Loan Accounting Sub-Ledger</h3>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 font-bold mono">ACCOUNTS 2210 &
+              5210</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Choose between Method A (Auto-Accrued Interest from start date & rate%
+            p.a.) or Method B (Manual Realized Interest)</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-white/10 uppercase mono text-[10px]">
+            <tr>
+              <th class="py-2.5 px-3">Loan Facility & Code</th>
+              <th class="py-2.5 px-3">Principal (₹)</th>
+              <th class="py-2.5 px-3">Start Date</th>
+              <th class="py-2.5 px-3">Rate % p.a.</th>
+              <th class="py-2.5 px-3 text-center">Accounting Mode</th>
+              <th class="py-2.5 px-3 text-right">Interest Liability (₹)</th>
+              <th class="py-2.5 px-3 text-right">Total Liability (₹)</th>
+            </tr>
+          </thead>
+          <tbody id="loans-tbody" class="divide-y divide-white/5 text-slate-200">
+            <tr>
+              <td colspan="7" class="text-center py-4 text-slate-400">Loading loan records from SQLite...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE BOTTOM BAR -->
+  <div
+    class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/95 backdrop-blur-md border-t border-white/10 px-2 py-2 flex items-center justify-around z-40">
+    <button onclick="switchTab('balancesheet')" id="mtab-balancesheet"
+      class="mobile-tab active flex flex-col items-center text-slate-400">
+      <span class="text-base">🏛️</span>
+      <span class="text-[9px] font-bold mt-0.5">B/Sheet</span>
+    </button>
+    <button onclick="switchTab('chartofaccounts')" id="mtab-chartofaccounts"
+      class="mobile-tab flex flex-col items-center text-slate-400">
+      <span class="text-base">📋</span>
+      <span class="text-[9px] font-bold mt-0.5">COA</span>
+    </button>
+    <button onclick="switchTab('mutualfunds')" id="mtab-mutualfunds"
+      class="mobile-tab flex flex-col items-center text-slate-400">
+      <span class="text-base">📈</span>
+      <span class="text-[9px] font-bold mt-0.5">MFs</span>
+    </button>
+    <button onclick="switchTab('pnl')" id="mtab-pnl" class="mobile-tab flex flex-col items-center text-slate-400">
+      <span class="text-base">📊</span>
+      <span class="text-[9px] font-bold mt-0.5">P&L</span>
+    </button>
+    <button onclick="switchTab('journal')" id="mtab-journal"
+      class="mobile-tab flex flex-col items-center text-slate-400">
+      <span class="text-base">📖</span>
+      <span class="text-[9px] font-bold mt-0.5">Journal</span>
+    </button>
+    <button onclick="switchTab('gold_loans')" id="mtab-gold_loans"
+      class="mobile-tab flex flex-col items-center text-slate-400">
+      <span class="text-base">🪙</span>
+      <span class="text-[9px] font-bold mt-0.5">Gold</span>
+    </button>
+  </div>
+
+  <!-- ==================== MODAL 1: JOURNAL VOUCHER ==================== -->
+  <div id="voucher-modal"
+    class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center p-0 md:p-4">
+    <div class="glass-card p-5 w-full max-w-lg rounded-b-none md:rounded-2xl border-cyan-500/40 flex flex-col gap-3">
+      <div class="flex justify-between items-center pb-2 border-b border-white/10">
+        <h3 class="text-xs font-bold text-white uppercase tracking-wider">New Double-Entry Journal Voucher</h3>
+        <button onclick="closeVoucherModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Voucher Date</label>
+            <input type="date" id="v-date"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Narration / Description</label>
+            <input type="text" id="v-narration" placeholder="e.g. Salary credited to HDFC"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs">
+          </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 space-y-2">
+          <div class="font-bold text-emerald-400 text-[11px] uppercase">1. Debit Account (Dr)</div>
+          <div class="grid grid-cols-3 gap-2">
+            <select id="v-dr-account"
+              class="col-span-2 bg-slate-900 border border-white/10 rounded p-2 text-white mono text-xs"></select>
+            <input type="number" id="v-dr-amount" placeholder="Amount (₹)"
+              class="bg-slate-900 border border-white/10 rounded p-2 text-white mono text-xs font-bold">
+          </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-rose-950/20 border border-rose-500/30 space-y-2">
+          <div class="font-bold text-rose-400 text-[11px] uppercase">2. Credit Account (Cr)</div>
+          <div class="grid grid-cols-3 gap-2">
+            <select id="v-cr-account"
+              class="col-span-2 bg-slate-900 border border-white/10 rounded p-2 text-white mono text-xs"></select>
+            <input type="number" id="v-cr-amount" placeholder="Amount (₹)"
+              class="bg-slate-900 border border-white/10 rounded p-2 text-white mono text-xs font-bold">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-white/10">
+        <button onclick="closeVoucherModal()"
+          class="flex-1 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300">Cancel</button>
+        <button onclick="submitVoucher()"
+          class="flex-1 py-2 rounded-lg text-xs font-bold bg-cyan-500 text-black hover:bg-cyan-400 transition">Post to
+          SQLite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: ADD MUTUAL FUND ==================== -->
+  <div id="mf-add-modal"
+    class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center p-0 md:p-4">
+    <div class="glass-card p-5 w-full max-w-md rounded-b-none md:rounded-2xl border-purple-500/40 flex flex-col gap-3">
+      <div class="flex justify-between items-center pb-2 border-b border-white/10">
+        <h3 class="text-xs font-bold text-white uppercase tracking-wider">Add Mutual Fund Scheme</h3>
+        <button onclick="closeAddMFModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-0.5">Scheme Name</label>
+          <input type="text" id="new-mf-name" placeholder="e.g. Nippon India Small Cap Fund"
+            class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">AMFI Code</label>
+            <input type="number" id="new-mf-code" placeholder="118778"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Category</label>
+            <select id="new-mf-cat"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs">
+              <option>Flexi Cap</option>
+              <option>Index Fund</option>
+              <option>Mid Cap</option>
+              <option>Small Cap</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Units Held</label>
+            <input type="number" id="new-mf-units" placeholder="1000"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs font-bold">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Avg Buy NAV (₹)</label>
+            <input type="number" id="new-mf-nav" placeholder="65.40" step="0.01"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs font-bold">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-white/10">
+        <button onclick="closeAddMFModal()"
+          class="flex-1 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300">Cancel</button>
+        <button onclick="submitNewMF()"
+          class="flex-1 py-2 rounded-lg text-xs font-bold bg-purple-500 text-white hover:bg-purple-400 transition">Save
+          to SQLite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: CREATE / EDIT ACCOUNT ==================== -->
+  <div id="account-modal"
+    class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-end md:items-center justify-center p-0 md:p-4">
+    <div class="glass-card p-5 w-full max-w-lg rounded-b-none md:rounded-2xl border-emerald-500/40 flex flex-col gap-3">
+      <div class="flex justify-between items-center pb-2 border-b border-white/10">
+        <div>
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider" id="acc-modal-title">Create Custom Account
+          </h3>
+          <p class="text-[10px] text-slate-400">Master double-entry Chart of Accounts (COA) entry</p>
+        </div>
+        <button onclick="closeAccountModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Account Code (Numeric)</label>
+            <input type="text" id="acc-modal-code" placeholder="e.g. 1115 or 5130"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs font-bold outline-none focus:border-cyan-400">
+            <span class="text-[9px] text-slate-500" id="acc-code-hint">1000s=Asset, 2000s=Liab, 4000s=Inc,
+              5000s=Exp</span>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Account Class / Type</label>
+            <select id="acc-modal-type" onchange="onAccountTypeChange()"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs outline-none focus:border-cyan-400">
+              <option value="ASSET">ASSET (1000 - Debit Normal)</option>
+              <option value="LIABILITY">LIABILITY (2000 - Credit Normal)</option>
+              <option value="EQUITY">EQUITY (3000 - Credit Normal)</option>
+              <option value="INCOME">INCOME (4000 - Credit Normal)</option>
+              <option value="EXPENSE">EXPENSE (5000 - Debit Normal)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-0.5">Account Title / Name</label>
+          <input type="text" id="acc-modal-name" placeholder="e.g. SBI Savings Bank Account"
+            class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs outline-none focus:border-cyan-400">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-0.5">Sub-Type Category</label>
+            <input type="text" id="acc-modal-subtype" list="subtype-suggestions" placeholder="e.g. Current Assets"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs outline-none focus:border-cyan-400">
+            <datalist id="subtype-suggestions">
+              <option value="Current Assets">
+              <option value="Investments">
+              <option value="Fixed Assets">
+              <option value="Retirement">
+              <option value="Current Liabilities">
+              <option value="Long-Term Debt">
+              <option value="Owner Capital">
+              <option value="Direct Income">
+              <option value="Other Income">
+              <option value="Living Needs">
+              <option value="Finance Costs">
+              <option value="Subscriptions">
+              <option value="Discretionary Expenses">
+            </datalist>
+          </div>
+          <div id="acc-modal-balance-wrap">
+            <label class="text-[10px] text-slate-400 block mb-0.5">Opening Balance (₹)</label>
+            <input type="number" id="acc-modal-balance" value="0.00" step="0.01"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white mono text-xs font-bold outline-none focus:border-cyan-400">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400 block mb-0.5">Description / Purpose (Optional)</label>
+          <input type="text" id="acc-modal-desc" placeholder="e.g. Secondary savings account in SBI"
+            class="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-white text-xs outline-none focus:border-cyan-400">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-white/10">
+        <button onclick="closeAccountModal()"
+          class="flex-1 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300">Cancel</button>
+        <button onclick="saveAccount()"
+          class="flex-1 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-black hover:bg-emerald-400 transition"
+          id="acc-modal-save-btn">Save to SQLite</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT APP LOGIC -->
+  <script>
+    const API_BASE = ""; // Relative path to FastAPI backend
+    let allAccountsCache = [];
+    let activeCOAFilter = 'ALL';
+    let isEditingAccount = false;
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.mobile-tab').forEach(el => el.classList.remove('active'));
+
+      const target = document.getElementById('view-' + tabId);
+      if (target) target.classList.remove('hidden');
+
+      const dtab = document.getElementById('dtab-' + tabId);
+      if (dtab) dtab.classList.add('active');
+
+      const mtab = document.getElementById('mtab-' + tabId);
+      if (mtab) mtab.classList.add('active');
+
+      if (tabId === 'balancesheet') loadBalanceSheet();
+      if (tabId === 'chartofaccounts') loadChartOfAccounts();
+      if (tabId === 'pnl') loadPnL();
+      if (tabId === 'journal') loadJournal();
+      if (tabId === 'ledger') loadLedger();
+      if (tabId === 'trialbalance') loadTrialBalance();
+      if (tabId === 'mutualfunds') loadMutualFunds();
+      if (tabId === 'gold_loans') loadGoldAndLoans();
+    }
+
+    async function loadStatusHUD() {
+      try {
+        const res = await fetch(`${API_BASE}/api/status`);
+        const data = await res.json();
+        document.getElementById('hud-equity').innerText = '₹' + Math.round(data.net_worth).toLocaleString('en-IN');
+        document.getElementById('hud-assets').innerText = '₹' + Math.round(data.total_assets).toLocaleString('en-IN');
+        if (data.net_surplus !== undefined) {
+          document.getElementById('hud-surplus').innerText = '₹' + Math.round(data.net_surplus).toLocaleString('en-IN');
+        }
+        document.getElementById('hud-tb-amount').innerText = data.trial_balance_balanced ? 'Balanced' : 'Discrepancy';
+      } catch (e) {
+        console.error('Failed loading status HUD', e);
+      }
+    }
+
+    // ==================== CHART OF ACCOUNTS (COA) LOGIC ====================
+
+    async function loadChartOfAccounts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/accounts`);
+        const accounts = await res.json();
+        allAccountsCache = accounts;
+
+        // Counters
+        const assetCount = accounts.filter(a => a.type === 'ASSET').length;
+        const liabCount = accounts.filter(a => a.type === 'LIABILITY').length;
+        const equityCount = accounts.filter(a => a.type === 'EQUITY').length;
+        const incomeCount = accounts.filter(a => a.type === 'INCOME' || a.type === 'REVENUE').length;
+        const expenseCount = accounts.filter(a => a.type === 'EXPENSE').length;
+
+        document.getElementById('coa-total-count').innerText = `${accounts.length} Accounts`;
+        document.getElementById('coa-count-asset').innerText = `${assetCount} Accounts`;
+        document.getElementById('coa-count-liab').innerText = `${liabCount} Accounts`;
+        document.getElementById('coa-count-equity').innerText = `${equityCount} Accounts`;
+        document.getElementById('coa-count-income').innerText = `${incomeCount} Accounts`;
+        document.getElementById('coa-count-expense').innerText = `${expenseCount} Accounts`;
+
+        renderCOATable();
+        populateAccountDropdowns(accounts);
+      } catch (e) {
+        console.error('Failed loading Chart of Accounts', e);
+      }
+    }
+
+    function renderCOATable() {
+      const tbody = document.getElementById('coa-table-body');
+      tbody.innerHTML = '';
+
+      const query = (document.getElementById('coa-search-input')?.value || '').toLowerCase().trim();
+
+      const filtered = allAccountsCache.filter(a => {
+        const matchFilter = activeCOAFilter === 'ALL' || a.type === activeCOAFilter || (activeCOAFilter === 'INCOME' && a.type === 'REVENUE');
+        const matchSearch = !query || a.code.toLowerCase().includes(query) || a.name.toLowerCase().includes(query) || (a.sub_type || '').toLowerCase().includes(query);
+        return matchFilter && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400">No accounts match the current filter or search criteria.</td></tr>';
+        return;
+      }
+
+      filtered.forEach(acc => {
+        const tr = document.createElement('tr');
+        const isDr = acc.type === 'ASSET' || acc.type === 'EXPENSE';
+        const typeBadgeClass = acc.type === 'ASSET' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+          acc.type === 'LIABILITY' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' :
+            acc.type === 'EQUITY' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' :
+              (acc.type === 'INCOME' || acc.type === 'REVENUE') ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30' :
+                'bg-amber-500/10 text-amber-400 border border-amber-500/30';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3">
+            <span class="mono font-bold text-white px-2 py-0.5 rounded bg-slate-900 border border-white/10 text-xs">${acc.code}</span>
+          </td>
+          <td class="py-2.5 px-3">
+            <div class="font-bold text-white">${acc.name}</div>
+            <div class="text-[10px] text-slate-400">${acc.description || 'Master Ledger Account'}</div>
+          </td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold mono ${typeBadgeClass}">${acc.type}</span>
+          </td>
+          <td class="py-2.5 px-3 text-slate-300 font-medium">${acc.sub_type}</td>
+          <td class="py-2.5 px-3 text-center">
+            <span class="mono text-[10px] font-bold ${isDr ? 'text-emerald-400' : 'text-rose-400'}">${isDr ? 'Debit (Dr)' : 'Credit (Cr)'}</span>
+          </td>
+          <td class="py-2.5 px-3 text-right mono font-bold ${isDr ? 'text-emerald-300' : 'text-rose-300'}">
+            ₹${acc.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </td>
+          <td class="py-2.5 px-3 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <button onclick="jumpToLedger('${acc.code}')" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-[10px] mono" title="Open T-Account Ledger">
+                🔍 Ledger
+              </button>
+              <button onclick="openEditAccountModal('${acc.code}')" class="px-2 py-1 rounded bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/30 text-[10px]" title="Edit Account">
+                ✏️ Edit
+              </button>
+              <button onclick="deleteAccount('${acc.code}')" class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 text-[10px]" title="Delete Account">
+                🗑️
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterCOA(type) {
+      activeCOAFilter = type;
+      document.querySelectorAll('#coa-filter-pills button').forEach(b => {
+        b.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white';
+      });
+      const activeBtn = document.getElementById('coa-pill-' + type);
+      if (activeBtn) activeBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500 text-black';
+      renderCOATable();
+    }
+
+    function searchCOA() {
+      renderCOATable();
+    }
+
+    function jumpToLedger(code) {
+      switchTab('ledger');
+      const sel = document.getElementById('ledger-account-select');
+      if (sel) {
+        sel.value = code;
+        loadLedger();
+      }
+    }
+
+    function populateAccountDropdowns(accounts) {
+      const drSelect = document.getElementById('v-dr-account');
+      const crSelect = document.getElementById('v-cr-account');
+      const ledgerSelect = document.getElementById('ledger-account-select');
+
+      if (!drSelect || !crSelect || !ledgerSelect) return;
+
+      const currentLedgerVal = ledgerSelect.value;
+
+      drSelect.innerHTML = '';
+      crSelect.innerHTML = '';
+      ledgerSelect.innerHTML = '';
+
+      accounts.forEach(a => {
+        const opt = `<option value="${a.code}">${a.code} - ${a.name} (${a.type})</option>`;
+        drSelect.innerHTML += opt;
+        crSelect.innerHTML += opt;
+        ledgerSelect.innerHTML += `<option value="${a.code}">${a.code} - ${a.name}</option>`;
+      });
+
+      if (currentLedgerVal) ledgerSelect.value = currentLedgerVal;
+    }
+
+    // ==================== CREATE / EDIT ACCOUNT MODAL ====================
+
+    function openCreateAccountModal() {
+      isEditingAccount = false;
+      document.getElementById('acc-modal-title').innerText = "Create Custom Account";
+      document.getElementById('acc-modal-code').value = "";
+      document.getElementById('acc-modal-code').disabled = false;
+      document.getElementById('acc-modal-name').value = "";
+      document.getElementById('acc-modal-type').value = "ASSET";
+      document.getElementById('acc-modal-subtype').value = "Current Assets";
+      document.getElementById('acc-modal-balance').value = "0.00";
+      document.getElementById('acc-modal-desc').value = "";
+      document.getElementById('acc-modal-balance-wrap').style.display = "block";
+      document.getElementById('acc-code-hint').innerText = "1000s=Asset, 2000s=Liab, 4000s=Inc, 5000s=Exp";
+      document.getElementById('account-modal').classList.remove('hidden');
+    }
+
+    function openEditAccountModal(code) {
+      const acc = allAccountsCache.find(a => a.code === code);
+      if (!acc) return alert('Account not found');
+
+      isEditingAccount = true;
+      document.getElementById('acc-modal-title').innerText = `Edit Account: ${acc.code} - ${acc.name}`;
+      document.getElementById('acc-modal-code').value = acc.code;
+      document.getElementById('acc-modal-code').disabled = true;
+      document.getElementById('acc-modal-name').value = acc.name;
+      document.getElementById('acc-modal-type').value = acc.type === 'REVENUE' ? 'INCOME' : acc.type;
+      document.getElementById('acc-modal-subtype').value = acc.sub_type;
+      document.getElementById('acc-modal-desc').value = acc.description || '';
+      document.getElementById('acc-modal-balance-wrap').style.display = "none";
+      document.getElementById('acc-code-hint').innerText = "Account Code cannot be changed once created";
+      document.getElementById('account-modal').classList.remove('hidden');
+    }
+
+    function closeAccountModal() {
+      document.getElementById('account-modal').classList.add('hidden');
+    }
+
+    function onAccountTypeChange() {
+      const type = document.getElementById('acc-modal-type').value;
+      const subtypeInput = document.getElementById('acc-modal-subtype');
+      if (type === 'ASSET') subtypeInput.value = 'Current Assets';
+      else if (type === 'LIABILITY') subtypeInput.value = 'Current Liabilities';
+      else if (type === 'EQUITY') subtypeInput.value = 'Owner Capital';
+      else if (type === 'INCOME') subtypeInput.value = 'Direct Income';
+      else if (type === 'EXPENSE') subtypeInput.value = 'Living Needs';
+    }
+
+    async function saveAccount() {
+      const code = document.getElementById('acc-modal-code').value.trim();
+      const name = document.getElementById('acc-modal-name').value.trim();
+      const type = document.getElementById('acc-modal-type').value;
+      const subtype = document.getElementById('acc-modal-subtype').value.trim() || 'General';
+      const balance = parseFloat(document.getElementById('acc-modal-balance').value) || 0.0;
+      const desc = document.getElementById('acc-modal-desc').value.trim();
+
+      if (!code || !name) return alert('Account Code and Account Name are required.');
+
+      try {
+        if (isEditingAccount) {
+          const res = await fetch(`${API_BASE}/api/accounts/${code}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, sub_type: subtype, description: desc })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Update failed');
+          alert(`Account ${code} (${name}) updated successfully!`);
+        } else {
+          const res = await fetch(`${API_BASE}/api/accounts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: code,
+              name: name,
+              type: type,
+              sub_type: subtype,
+              opening_balance: balance,
+              description: desc
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Creation failed');
+          alert(`Account ${code} - ${name} permanently added to Chart of Accounts in SQLite!`);
+        }
+
+        closeAccountModal();
+        loadChartOfAccounts();
+        loadBalanceSheet();
+        loadTrialBalance();
+      } catch (e) {
+        alert('Error saving account: ' + e.message);
+      }
+    }
+
+    async function deleteAccount(code) {
+      if (!confirm(`Are you sure you want to delete Account ${code}? This can only be done if no journal entries reference it.`)) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/accounts/${code}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Deletion failed');
+        alert(`Account ${code} deleted from SQLite.`);
+        loadChartOfAccounts();
+        loadBalanceSheet();
+        loadTrialBalance();
+      } catch (e) {
+        alert('Cannot delete account: ' + e.message);
+      }
+    }
+
+    // ==================== BALANCE SHEET LOGIC ====================
+
+    async function loadBalanceSheet() {
+      try {
+        const res = await fetch(`${API_BASE}/api/balance-sheet`);
+        const data = await res.json();
+
+        document.getElementById('bs-tot-assets').innerText = '₹' + data.assets.total_assets.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('bs-tot-liab').innerText = '₹' + data.liabilities.total_liabilities.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('bs-tot-equity').innerText = '₹' + data.equity.total_equity.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('hud-equity').innerText = '₹' + Math.round(data.equity.total_equity).toLocaleString('en-IN');
+        document.getElementById('hud-assets').innerText = '₹' + Math.round(data.assets.total_assets).toLocaleString('en-IN');
+
+        const aContainer = document.getElementById('bs-assets-container');
+        aContainer.innerHTML = '';
+
+        const renderSubSection = (title, items, total) => {
+          let html = `<div><div class="font-bold text-white text-[11px] mb-1">${title}</div><div class="space-y-1 pl-2 border-l border-white/10">`;
+          items.forEach(i => {
+            html += `<div class="flex justify-between text-slate-300"><span>${i.code} ${i.name}</span><span class="mono font-semibold">₹${i.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>`;
+          });
+          html += `<div class="flex justify-between text-slate-400 text-[10px] pt-1 border-t border-white/5 font-bold"><span>Total</span><span class="mono">₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div></div></div>`;
+          return html;
+        };
+
+        aContainer.innerHTML += renderSubSection('1. Current Assets (Liquid)', data.assets.current_assets, data.assets.total_current_assets);
+        aContainer.innerHTML += renderSubSection('2. Investments & Holdings', data.assets.investments, data.assets.total_investments);
+        aContainer.innerHTML += renderSubSection('3. Fixed Assets', data.assets.fixed_assets, data.assets.total_fixed_assets);
+        aContainer.innerHTML += renderSubSection('4. Retirement Corpus', data.assets.retirement_assets, data.assets.total_retirement);
+
+        const lContainer = document.getElementById('bs-liab-container');
+        lContainer.innerHTML = '';
+        data.liabilities.current_liabilities.concat(data.liabilities.long_term_debt).forEach(l => {
+          lContainer.innerHTML += `<div class="flex justify-between text-slate-300"><span>${l.code} ${l.name}</span><span class="mono font-semibold text-rose-400">₹${l.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>`;
+        });
+
+        const eqContainer = document.getElementById('bs-equity-container');
+        eqContainer.innerHTML = '';
+        data.equity.items.forEach(eq => {
+          eqContainer.innerHTML += `<div class="flex justify-between text-slate-300"><span>${eq.code} ${eq.name}</span><span class="mono font-semibold text-cyan-300">₹${eq.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>`;
+        });
+      } catch (e) {
+        console.error('Failed loading balance sheet', e);
+      }
+    }
+
+    // ==================== P&L STATEMENT LOGIC ====================
+
+    async function loadPnL() {
+      try {
+        const res = await fetch(`${API_BASE}/api/income-statement`);
+        const data = await res.json();
+
+        document.getElementById('pnl-tot-income').innerText = '₹' + data.income.total_income.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('pnl-tot-expense').innerText = '₹' + data.expenses.total_expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('pnl-net-surplus').innerText = '₹' + data.net_surplus.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('pnl-savings-rate').innerText = `${data.savings_rate_pct}%`;
+        document.getElementById('hud-surplus').innerText = '₹' + Math.round(data.net_surplus).toLocaleString('en-IN');
+
+        const iList = document.getElementById('pnl-income-list');
+        iList.innerHTML = '';
+        data.income.direct_income.concat(data.income.other_income).forEach(i => {
+          iList.innerHTML += `<div class="p-2.5 rounded-lg bg-slate-900 border border-white/5 flex justify-between"><div><div class="font-bold text-white">${i.code} ${i.name}</div><div class="text-[10px] text-slate-400">${i.sub_type}</div></div><span class="mono font-bold text-emerald-400">+₹${i.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>`;
+        });
+
+        const eList = document.getElementById('pnl-expense-list');
+        eList.innerHTML = '';
+        data.expenses.living_needs.concat(data.expenses.finance_costs).concat(data.expenses.subscriptions).concat(data.expenses.discretionary).forEach(e => {
+          eList.innerHTML += `<div class="p-2.5 rounded-lg bg-slate-900 border border-white/5 flex justify-between"><div><div class="font-bold text-white">${e.code} ${e.name}</div><div class="text-[10px] text-slate-400">${e.sub_type}</div></div><span class="mono font-bold text-rose-400">-₹${e.balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>`;
+        });
+      } catch (e) {
+        console.error('Failed loading PnL', e);
+      }
+    }
+
+    // ==================== JOURNAL & LEDGER LOGIC ====================
+
+    async function loadJournal() {
+      try {
+        const res = await fetch(`${API_BASE}/api/journal`);
+        const vouchers = await res.json();
+        const tbody = document.getElementById('journal-tbody');
+        tbody.innerHTML = '';
+
+        vouchers.forEach(v => {
+          v.entries.forEach((e, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = idx === 0 ? 'border-t border-white/10' : '';
+            tr.innerHTML = `
+              <td class="py-2 px-3 mono text-slate-400">${idx === 0 ? `${v.voucher_date}<br><span class="text-cyan-400 font-bold">${v.voucher_no}</span>` : ''}</td>
+              <td class="py-2 px-3">
+                <div class="font-bold text-white ${e.credit > 0 ? 'pl-6 text-slate-300' : ''}">${e.credit > 0 ? 'To ' : ''}${e.account_code} - ${e.account_name}</div>
+                ${idx === v.entries.length - 1 ? `<div class="text-[10px] text-slate-400 italic mt-0.5">(${v.narration})</div>` : ''}
+              </td>
+              <td class="py-2 px-3 text-center"><span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${e.account_type === 'ASSET' ? 'bg-emerald-500/10 text-emerald-400' : e.account_type === 'LIABILITY' ? 'bg-rose-500/10 text-rose-400' : 'bg-cyan-500/10 text-cyan-400'} mono">${e.account_type}</span></td>
+              <td class="py-2 px-3 text-right mono font-bold text-emerald-400">${e.debit > 0 ? '₹' + e.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}</td>
+              <td class="py-2 px-3 text-right mono font-bold text-rose-400">${e.credit > 0 ? '₹' + e.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+      } catch (e) {
+        console.error('Failed loading journal', e);
+      }
+    }
+
+    async function loadLedger() {
+      const code = document.getElementById('ledger-account-select').value;
+      try {
+        const res = await fetch(`${API_BASE}/api/ledger/${code}`);
+        const data = await res.json();
+
+        document.getElementById('ledger-acc-name').innerText = `${data.code} - ${data.name}`;
+        document.getElementById('ledger-acc-cat').innerText = `${data.sub_type} • Normal Balance: ${data.normal_balance}`;
+        document.getElementById('ledger-closing-bal').innerText = `₹${data.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (${data.normal_balance})`;
+
+        const tbody = document.getElementById('ledger-entries-tbody');
+        tbody.innerHTML = '';
+        if (data.entries.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-400">No transactions recorded for this account.</td></tr>';
+          return;
+        }
+
+        data.entries.forEach(e => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-1.5 px-3 mono text-slate-400">${e.voucher_date}</td>
+            <td class="py-1.5 px-3 mono text-cyan-400 font-bold">${e.voucher_no}</td>
+            <td class="py-1.5 px-3">${e.narration}</td>
+            <td class="py-1.5 px-3 text-right mono font-bold text-emerald-400">${e.debit > 0 ? '₹' + e.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}</td>
+            <td class="py-1.5 px-3 text-right mono font-bold text-rose-400">${e.credit > 0 ? '₹' + e.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}</td>
+            <td class="py-1.5 px-3 text-right mono font-bold text-white">₹${e.running_balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error('Failed loading ledger', e);
+      }
+    }
+
+    // ==================== TRIAL BALANCE LOGIC ====================
+
+    async function loadTrialBalance() {
+      try {
+        const res = await fetch(`${API_BASE}/api/trial-balance`);
+        const data = await res.json();
+
+        document.getElementById('tb-tot-dr').innerText = '₹' + data.total_debit.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('tb-tot-cr').innerText = '₹' + data.total_credit.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        document.getElementById('tb-status-badge').innerText = data.is_balanced ? 'STATUS: BALANCED (Σ Dr == Σ Cr)' : `DISCREPANCY: ₹${data.discrepancy}`;
+
+        const tbody = document.getElementById('trial-balance-tbody');
+        tbody.innerHTML = '';
+        data.accounts.forEach(a => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-2 px-3 font-semibold text-white mono">${a.code} - ${a.name}</td>
+            <td class="py-2 px-3 text-slate-400">${a.sub_type}</td>
+            <td class="py-2 px-3 text-right mono font-bold text-emerald-400">${a.debit > 0 ? '₹' + a.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}</td>
+            <td class="py-2 px-3 text-right mono font-bold text-rose-400">${a.credit > 0 ? '₹' + a.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error('Failed loading trial balance', e);
+      }
+    }
+
+    // ==================== MUTUAL FUNDS LOGIC ====================
+
+    async function loadMutualFunds() {
+      try {
+        const res = await fetch(`${API_BASE}/api/mutual-funds`);
+        const data = await res.json();
+
+        document.getElementById('mf-tot-invested').innerText = '₹' + data.total_invested.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        document.getElementById('mf-tot-current').innerText = '₹' + data.current_valuation.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        document.getElementById('mf-tot-pnl').innerText = '+₹' + data.total_pnl.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        document.getElementById('mf-tot-return').innerText = `+${data.absolute_return_pct}% Absolute`;
+        document.getElementById('mf-schemes-count').innerText = `${data.schemes_count} Funds`;
+        document.getElementById('hud-mf-val').innerText = '₹' + Math.round(data.current_valuation).toLocaleString('en-IN');
+        document.getElementById('hud-mf-ret').innerText = `▲ +₹${Math.round(data.total_pnl / 1000)}k (+${data.absolute_return_pct}%)`;
+
+        const tbody = document.getElementById('mf-holdings-tbody');
+        tbody.innerHTML = '';
+        data.holdings.forEach(h => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-2.5 px-3">
+              <div class="font-bold text-white">${h.scheme_name}</div>
+              <div class="text-[10px] text-slate-400 mono">Code: ${h.scheme_code} • SIP: ${h.sip_day}th</div>
+            </td>
+            <td class="py-2.5 px-3"><span class="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-300 text-[10px] font-bold mono">${h.category}</span></td>
+            <td class="py-2.5 px-3 text-right mono font-semibold text-slate-300">${h.units.toLocaleString()}</td>
+            <td class="py-2.5 px-3 text-right mono text-slate-400">₹${h.avg_buy_nav.toFixed(2)}</td>
+            <td class="py-2.5 px-3 text-right mono font-bold text-purple-300">₹${h.latest_nav.toFixed(2)}</td>
+            <td class="py-2.5 px-3 text-right mono text-slate-300">₹${h.invested_amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+            <td class="py-2.5 px-3 text-right mono font-bold text-white">₹${h.current_valuation.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+            <td class="py-2.5 px-3 text-right mono font-bold text-emerald-400">+₹${h.net_pnl.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (+${h.return_pct}%)</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error('Failed loading mutual funds', e);
+      }
+    }
+
+    // ==================== GOLD & 2-WAY LOANS LOGIC ====================
+
+    function calcGoldLive() {
+      const grams = parseFloat(document.getElementById('gl-gold-grams').value) || 0;
+      const rate = parseFloat(document.getElementById('gl-gold-rate').value) || 0;
+      const gross = Math.round(grams * rate * 100) / 100;
+      const haircut = Math.round(gross * 0.23 * 100) / 100;
+      const net = Math.round((gross - haircut) * 100) / 100;
+      const pavan = Math.round((grams / 8.0) * 10) / 10;
+
+      document.getElementById('gl-gold-pavan').innerText = `${pavan} Pavan (1 Pavan = 8g)`;
+      document.getElementById('gl-gold-gross').innerText = '₹' + gross.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+      document.getElementById('gl-gold-haircut-amt').innerText = `-₹${haircut.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (23% pledge margin)`;
+      document.getElementById('gl-gold-net').innerText = '₹' + net.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+
+    async function loadGoldAndLoans() {
+      try {
+        // Gold
+        const res = await fetch(`${API_BASE}/api/gold`);
+        const gold = await res.json();
+        document.getElementById('gl-gold-grams').value = gold.grams;
+        document.getElementById('gl-gold-rate').value = gold.market_rate_per_gram;
+        calcGoldLive();
+
+        // Loans
+        const lRes = await fetch(`${API_BASE}/api/loans`);
+        const loans = await lRes.json();
+        const tbody = document.getElementById('loans-tbody');
+        tbody.innerHTML = '';
+        loans.forEach(l => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-2.5 px-3">
+              <div class="font-bold text-white">${l.loan_name}</div>
+              <div class="text-[10px] text-slate-400 mono">Code: ${l.account_code}</div>
+            </td>
+            <td class="py-2.5 px-3 mono font-semibold text-slate-300">₹${l.principal.toLocaleString('en-IN')}</td>
+            <td class="py-2.5 px-3 mono text-slate-400">${l.start_date}</td>
+            <td class="py-2.5 px-3 mono text-rose-300 font-bold">${l.annual_rate_pct}% p.a.</td>
+            <td class="py-2.5 px-3 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold mono ${l.mode === 'AUTO' ? 'bg-cyan-500/10 text-cyan-400' : 'bg-purple-500/10 text-purple-400'}">${l.mode === 'AUTO' ? '⚡ Auto-Accrued' : '✍️ Manual Realized'}</span>
+            </td>
+            <td class="py-2.5 px-3 text-right mono font-bold text-rose-400">+₹${l.accrued_interest.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            <td class="py-2.5 px-3 text-right mono font-extrabold text-white">₹${l.total_liability.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error('Failed loading gold and loans', e);
+      }
+    }
+
+    async function saveGoldValuation() {
+      const grams = parseFloat(document.getElementById('gl-gold-grams').value) || 0;
+      const rate = parseFloat(document.getElementById('gl-gold-rate').value) || 0;
+      try {
+        const res = await fetch(`${API_BASE}/api/gold`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ grams: grams, market_rate_per_gram: rate })
+        });
+        const data = await res.json();
+        alert(`Gold valuation permanently updated in SQLite!
+
+Grams: ${data.grams}g (${data.pavan} Pavan)
+22K Rate: ₹${data.market_rate_per_gram}/g
+Net Recognized Asset (Account 1230): ₹${data.net_recognized_asset_value}`);
+        loadBalanceSheet();
+        loadChartOfAccounts();
+        loadTrialBalance();
+      } catch (e) {
+        alert('Failed saving gold valuation: ' + e);
+      }
+    }
+
+    async function refreshLiveAMFINAVs() {
+      alert("Fetching live NAVs from official AMFI open feed...");
+      try {
+        const res = await fetch(`${API_BASE}/api/mutual-funds/sync`, { method: 'POST' });
+        const data = await res.json();
+        alert(`AMFI Sync Complete! Updated ${data.updated_schemes} schemes from official closing NAVs.`);
+        loadMutualFunds();
+        loadBalanceSheet();
+        loadChartOfAccounts();
+      } catch (e) {
+        alert('Failed syncing AMFI NAVs: ' + e);
+      }
+    }
+
+    async function syncTradingBridge() {
+      try {
+        const res = await fetch(`${API_BASE}/api/journal-bridge/sync`, { method: 'POST' });
+        const data = await res.json();
+        alert(`App #4 Trading Journal Reconciled!
+
+Real Trades Count: ${data.real_trades_count}
+Net Realized P&L: ₹${data.net_realized_pnl}
+Margin: ₹${data.trading_margin}`);
+        document.getElementById('strip-trading-pnl').innerText = `+₹${data.net_realized_pnl}`;
+        document.getElementById('strip-trading-margin').innerText = `₹${data.trading_margin}`;
+        loadBalanceSheet();
+        loadPnL();
+        loadChartOfAccounts();
+      } catch (e) {
+        alert('Error syncing journal bridge: ' + e);
+      }
+    }
+
+    async function testNTFYAlert() {
+      try {
+        const res = await fetch(`${API_BASE}/api/alerts/test`, { method: 'POST' });
+        const data = await res.json();
+        alert(`NTFY Alert dispatched to phone! Status: ${data.status}`);
+      } catch (e) {
+        alert('Error sending push alert: ' + e);
+      }
+    }
+
+    // ==================== MODAL VOUCHER LOGIC ====================
+
+    function openVoucherModal() {
+      document.getElementById('v-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('v-narration').value = '';
+      document.getElementById('v-dr-amount').value = '';
+      document.getElementById('v-cr-amount').value = '';
+      document.getElementById('voucher-modal').classList.remove('hidden');
+    }
+    function closeVoucherModal() {
+      document.getElementById('voucher-modal').classList.add('hidden');
+    }
+
+    async function submitVoucher() {
+      const date = document.getElementById('v-date').value;
+      const narration = document.getElementById('v-narration').value.trim() || 'Manual Journal Voucher';
+      const drCode = document.getElementById('v-dr-account').value;
+      const crCode = document.getElementById('v-cr-account').value;
+      const drAmt = parseFloat(document.getElementById('v-dr-amount').value) || 0;
+      const crAmt = parseFloat(document.getElementById('v-cr-amount').value) || 0;
+
+      if (drAmt <= 0 || crAmt <= 0) return alert('Enter valid non-zero amounts.');
+      if (Math.abs(drAmt - crAmt) > 0.01) return alert(`Double-entry violation! Debit (₹${drAmt}) must equal Credit (₹${crAmt}).`);
+
+      const payload = {
+        voucher_date: date,
+        narration: narration,
+        entries: [
+          { account_code: drCode, debit: drAmt, credit: 0.0 },
+          { account_code: crCode, debit: 0.0, credit: crAmt }
+        ]
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/journal/vouchers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.detail || 'Posting failed');
+
+        alert(`Voucher ${result.voucher_no} permanently posted to SQLite!`);
+        closeVoucherModal();
+        loadBalanceSheet();
+        loadJournal();
+        loadTrialBalance();
+        loadChartOfAccounts();
+        loadStatusHUD();
+      } catch (e) {
+        alert('Error posting voucher: ' + e.message);
+      }
+    }
+
+    // ==================== ADD MF MODAL ====================
+
+    function openAddMFModal() {
+      document.getElementById('mf-add-modal').classList.remove('hidden');
+    }
+    function closeAddMFModal() {
+      document.getElementById('mf-add-modal').classList.add('hidden');
+    }
+
+    async function submitNewMF() {
+      const name = document.getElementById('new-mf-name').value.trim();
+      const code = document.getElementById('new-mf-code').value.trim();
+      const cat = document.getElementById('new-mf-cat').value;
+      const units = parseFloat(document.getElementById('new-mf-units').value) || 0;
+      const nav = parseFloat(document.getElementById('new-mf-nav').value) || 0;
+
+      if (!name || !code || units <= 0 || nav <= 0) return alert('Enter valid scheme details');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/mutual-funds`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scheme_code: code,
+            scheme_name: name,
+            category: cat,
+            units: units,
+            avg_buy_nav: nav,
+            sip_day: 10
+          })
+        });
+        const data = await res.json();
+        alert(`Fund scheme permanently saved to SQLite! Live AMFI NAV: ₹${data.live_nav}`);
+        closeAddMFModal();
+        loadMutualFunds();
+        loadBalanceSheet();
+      } catch (e) {
+        alert('Error adding fund: ' + e);
+      }
+    }
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStatusHUD();
+      loadBalanceSheet();
+      loadPnL();
+      loadChartOfAccounts();
+      loadMutualFunds();
+    });
+  </script>
+</body>
+
+</html>
