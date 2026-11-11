@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Database connection: PostgreSQL if DATABASE_URL is set (Render / Cloud), else local SQLite
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 DB_PATH = BASE_DIR / "personal_finance.db"
 BACKUPS_DIR = BASE_DIR / "backups"
 
