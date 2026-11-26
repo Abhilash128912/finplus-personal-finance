@@ -1590,6 +1590,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ grams: grams, market_rate_per_gram: rate })
         });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
         const data = await res.json();
         alert(`Gold valuation permanently updated in SQLite!
 
@@ -1732,6 +1736,10 @@ Margin: ₹${data.trading_margin}`);
             sip_day: 10
           })
         });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
         const data = await res.json();
         alert(`Fund scheme permanently saved to SQLite! Live AMFI NAV: ₹${data.live_nav}`);
         closeAddMFModal();

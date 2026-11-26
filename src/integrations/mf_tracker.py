@@ -24,14 +24,16 @@ class MutualFundsTracker:
     def get_portfolio() -> Dict[str, Any]:
         """Returns all schemes, portfolio totals, and performance summary."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT id, scheme_code, scheme_name, category, units, avg_buy_nav, latest_nav, nav_date, sip_day, last_updated
-        FROM mutual_funds
-        ORDER BY id ASC;
-        """)
-        funds = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT id, scheme_code, scheme_name, category, units, avg_buy_nav, latest_nav, nav_date, sip_day, last_updated
+            FROM mutual_funds
+            ORDER BY id ASC;
+            """)
+            funds = cursor.fetchall()
+        finally:
+            conn.close()
 
         holdings = []
         tot_invested = 0.0
@@ -103,17 +105,22 @@ class MutualFundsTracker:
             logger.warning(f"Could not fetch AMFI live NAV for {scheme_code}: {e}")
 
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-        INSERT INTO mutual_funds (scheme_code, scheme_name, category, units, avg_buy_nav, latest_nav, nav_date, sip_day, last_updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(scheme_code) DO UPDATE SET
-            units = units + excluded.units,
-            latest_nav = excluded.latest_nav,
-            last_updated = excluded.last_updated;
-        """, (scheme_code, scheme_name, category, units, avg_buy_nav, live_nav, nav_date, sip_day, get_utc_iso()))
-        conn.commit()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+            INSERT INTO mutual_funds (scheme_code, scheme_name, category, units, avg_buy_nav, latest_nav, nav_date, sip_day, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(scheme_code) DO UPDATE SET
+                units = mutual_funds.units + excluded.units,
+                latest_nav = excluded.latest_nav,
+                last_updated = excluded.last_updated;
+            """, (scheme_code, scheme_name, category, units, avg_buy_nav, live_nav, nav_date, sip_day, get_utc_iso()))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
         # Update account 1210 in accounts table
         MutualFundsTracker.sync_valuation_to_balance_sheet()
@@ -124,33 +131,38 @@ class MutualFundsTracker:
     def sync_all_amfi_navs() -> Dict[str, Any]:
         """Fetches live closing NAVs for all portfolio schemes from AMFI."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, scheme_code FROM mutual_funds;")
-        funds = cursor.fetchall()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, scheme_code FROM mutual_funds;")
+            funds = cursor.fetchall()
 
-        updated_count = 0
-        for f in funds:
-            code = f["scheme_code"]
-            try:
-                url = f"{AMFI_API_BASE}/{code}"
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read().decode())
-                    if data.get("data"):
-                        latest = data["data"][0]
-                        nav = float(latest["nav"])
-                        nav_date = latest["date"]
-                        cursor.execute("""
-                        UPDATE mutual_funds
-                        SET latest_nav = ?, nav_date = ?, last_updated = ?
-                        WHERE id = ?;
-                        """, (nav, nav_date, get_utc_iso(), f["id"]))
-                        updated_count += 1
-            except Exception as e:
-                logger.error(f"Failed updating NAV for scheme {code}: {e}")
+            updated_count = 0
+            for f in funds:
+                code = f["scheme_code"]
+                try:
+                    url = f"{AMFI_API_BASE}/{code}"
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        data = json.loads(resp.read().decode())
+                        if data.get("data"):
+                            latest = data["data"][0]
+                            nav = float(latest["nav"])
+                            nav_date = latest["date"]
+                            cursor.execute("""
+                            UPDATE mutual_funds
+                            SET latest_nav = ?, nav_date = ?, last_updated = ?
+                            WHERE id = ?;
+                            """, (nav, nav_date, get_utc_iso(), f["id"]))
+                            updated_count += 1
+                except Exception as e:
+                    logger.error(f"Failed updating NAV for scheme {code}: {e}")
 
-        conn.commit()
-        conn.close()
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
         # Update balance sheet account 1210
         MutualFundsTracker.sync_valuation_to_balance_sheet()
@@ -168,9 +180,14 @@ class MutualFundsTracker:
         tot_val = portfolio["current_valuation"]
 
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE accounts SET balance = ? WHERE code = '1210';", (tot_val,))
-        conn.commit()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE accounts SET balance = ? WHERE code = '1210';", (tot_val,))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
         logger.info(f"Account 1210 (Mutual Funds) updated on Balance Sheet to ₹{tot_val}.")
 

@@ -6,7 +6,7 @@ Enforces strict mathematical Ind AS / GAAP debit-credit equality and financial s
 
 from typing import List, Dict, Any, Optional
 from src.db.database import get_connection
-from src.utils.time_and_logger import setup_logger, get_utc_iso
+from src.utils.time_and_logger import setup_logger, get_utc_iso, get_ist_now
 
 logger = setup_logger("AccountingEngine")
 
@@ -39,17 +39,26 @@ class DoubleEntryEngine:
         cursor = conn.cursor()
 
         try:
-            # Generate next voucher number
-            cursor.execute("SELECT COUNT(*) FROM journal_vouchers;")
-            count = cursor.fetchone()[0]
-            voucher_no = f"JV-2026-{String_pad(count + 1)}"
+            # Generate next voucher number using MAX(voucher_id) + 1 and voucher year
+            cursor.execute("SELECT COALESCE(MAX(voucher_id), 0) FROM journal_vouchers;")
+            max_id = cursor.fetchone()[0] or 0
+            year = voucher_date[:4] if len(voucher_date) >= 4 and voucher_date[:4].isdigit() else str(get_ist_now().year)
+            voucher_no = f"JV-{year}-{String_pad(max_id + 1)}"
 
             # Insert voucher header
-            cursor.execute("""
-            INSERT INTO journal_vouchers (voucher_no, voucher_date, narration, source, created_at)
-            VALUES (?, ?, ?, ?, ?);
-            """, (voucher_no, voucher_date, narration, source, get_utc_iso()))
-            voucher_id = cursor.lastrowid
+            if getattr(conn, "is_pg", False):
+                cursor.execute("""
+                INSERT INTO journal_vouchers (voucher_no, voucher_date, narration, source, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                RETURNING voucher_id;
+                """, (voucher_no, voucher_date, narration, source, get_utc_iso()))
+                voucher_id = cursor.fetchone()["voucher_id"]
+            else:
+                cursor.execute("""
+                INSERT INTO journal_vouchers (voucher_no, voucher_date, narration, source, created_at)
+                VALUES (?, ?, ?, ?, ?);
+                """, (voucher_no, voucher_date, narration, source, get_utc_iso()))
+                voucher_id = cursor.lastrowid
 
             # Insert entries and update account balances
             for e in entries:
@@ -94,18 +103,20 @@ class DoubleEntryEngine:
     def get_journal(limit: int = 100) -> List[Dict[str, Any]]:
         """Returns all vouchers with itemized entries."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT v.voucher_id, v.voucher_no, v.voucher_date, v.narration, v.source, v.created_at,
-               e.account_code, a.name AS account_name, a.type AS account_type, e.debit, e.credit
-        FROM journal_vouchers v
-        JOIN journal_entries e ON v.voucher_id = e.voucher_id
-        JOIN accounts a ON e.account_code = a.code
-        ORDER BY v.voucher_id DESC, e.entry_id ASC
-        LIMIT ?;
-        """, (limit * 5,))
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT v.voucher_id, v.voucher_no, v.voucher_date, v.narration, v.source, v.created_at,
+                   e.account_code, a.name AS account_name, a.type AS account_type, e.debit, e.credit
+            FROM journal_vouchers v
+            JOIN journal_entries e ON v.voucher_id = e.voucher_id
+            JOIN accounts a ON e.account_code = a.code
+            ORDER BY v.voucher_id DESC, e.entry_id ASC
+            LIMIT ?;
+            """, (limit * 5,))
+            rows = cursor.fetchall()
+        finally:
+            conn.close()
 
         vouchers_map: Dict[str, Dict[str, Any]] = {}
         for r in rows:
@@ -133,22 +144,23 @@ class DoubleEntryEngine:
     def get_ledger(account_code: str) -> Dict[str, Any]:
         """Returns T-Account transaction history and running balance for a given account."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT code, name, type, sub_type, balance, description FROM accounts WHERE code = ?;", (account_code,))
-        acc = cursor.fetchone()
-        if not acc:
-            conn.close()
-            raise ValueError(f"Account code {account_code} does not exist.")
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT code, name, type, sub_type, balance, description FROM accounts WHERE code = ?;", (account_code,))
+            acc = cursor.fetchone()
+            if not acc:
+                raise ValueError(f"Account code {account_code} does not exist.")
 
-        cursor.execute("""
-        SELECT v.voucher_no, v.voucher_date, v.narration, e.debit, e.credit
-        FROM journal_entries e
-        JOIN journal_vouchers v ON e.voucher_id = v.voucher_id
-        WHERE e.account_code = ?
-        ORDER BY v.voucher_date ASC, v.voucher_id ASC;
-        """, (account_code,))
-        txns = cursor.fetchall()
-        conn.close()
+            cursor.execute("""
+            SELECT v.voucher_no, v.voucher_date, v.narration, e.debit, e.credit
+            FROM journal_entries e
+            JOIN journal_vouchers v ON e.voucher_id = v.voucher_id
+            WHERE e.account_code = ?
+            ORDER BY v.voucher_date ASC, v.voucher_id ASC;
+            """, (account_code,))
+            txns = cursor.fetchall()
+        finally:
+            conn.close()
 
         entries = []
         running = 0.0
@@ -185,10 +197,12 @@ class DoubleEntryEngine:
     def get_trial_balance() -> Dict[str, Any]:
         """Calculates Trial Balance and checks mathematical balance."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT code, name, type, sub_type, balance FROM accounts WHERE code != '3200' ORDER BY code ASC;")
-        accounts = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT code, name, type, sub_type, balance FROM accounts WHERE code != '3200' ORDER BY code ASC;")
+            accounts = cursor.fetchall()
+        finally:
+            conn.close()
 
         rows = []
         total_dr = 0.0
@@ -230,10 +244,12 @@ class DoubleEntryEngine:
     def get_balance_sheet() -> Dict[str, Any]:
         """Generates classified Balance Sheet: Assets = Liabilities + Equity."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT code, name, type, sub_type, balance FROM accounts ORDER BY code ASC;")
-        accounts = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT code, name, type, sub_type, balance FROM accounts ORDER BY code ASC;")
+            accounts = cursor.fetchall()
+        finally:
+            conn.close()
 
         # Calculate live P&L surplus
         pnl = DoubleEntryEngine.get_income_statement()
@@ -322,10 +338,12 @@ class DoubleEntryEngine:
     def get_income_statement() -> Dict[str, Any]:
         """Generates Income & Expense Statement (P&L)."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT code, name, type, sub_type, balance FROM accounts WHERE type IN ('INCOME', 'REVENUE', 'EXPENSE') ORDER BY code ASC;")
-        accounts = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT code, name, type, sub_type, balance FROM accounts WHERE type IN ('INCOME', 'REVENUE', 'EXPENSE') ORDER BY code ASC;")
+            accounts = cursor.fetchall()
+        finally:
+            conn.close()
 
         direct_income = []
         other_income = []

@@ -80,10 +80,10 @@ class AccountUpdateInput(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {APP_NAME} ({APP_CODE}) on port {SERVER_PORT}...")
-    init_database()
+    await asyncio.to_thread(init_database)
     # Trigger initial sync from App #4 journal.db (REAL trades only)
     try:
-        JournalBridge.sync_real_trading_results()
+        await asyncio.to_thread(JournalBridge.sync_real_trading_results)
     except Exception as e:
         logger.warning(f"Could not auto-sync trading journal: {e}")
     yield
@@ -140,48 +140,84 @@ def get_all_accounts():
     """Returns complete Chart of Accounts ordered by standard numeric codes."""
     from src.db.database import get_connection
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT code, name, type, sub_type, balance, description FROM accounts ORDER BY code ASC;")
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT code, name, type, sub_type, balance, description FROM accounts ORDER BY code ASC;")
+        rows = cursor.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 @app.post("/api/accounts")
 def create_account(acc: AccountInput):
     """Creates a new customized account in the Chart of Accounts."""
     from src.db.database import get_connection
+    acc_type = acc.type.upper()
+    if acc_type in ("REVENUE", "INCOME"):
+        acc_type = "INCOME"
+    if acc_type not in ("ASSET", "LIABILITY", "EQUITY", "INCOME", "EXPENSE"):
+        raise HTTPException(status_code=400, detail=f"Invalid account type: {acc.type}")
+
+    opening = round(float(acc.opening_balance), 2)
+    if opening != 0.0 and acc.code == "3100":
+        raise HTTPException(status_code=400, detail="Cannot set opening_balance directly on Equity Capital (3100).")
+
     conn = get_connection()
-    cursor = conn.cursor()
     try:
+        cursor = conn.cursor()
         cursor.execute("SELECT code FROM accounts WHERE code = ?;", (acc.code,))
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail=f"Account code {acc.code} already exists.")
-        
-        acc_type = acc.type.upper()
-        if acc_type in ("REVENUE", "INCOME"):
-            acc_type = "INCOME"
+
+        if opening != 0.0:
+            cursor.execute("SELECT code FROM accounts WHERE code = '3100';")
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail="Contra equity account 3100 not found for opening balance.")
 
         cursor.execute("""
         INSERT INTO accounts (code, name, type, sub_type, balance, description)
         VALUES (?, ?, ?, ?, ?, ?);
-        """, (acc.code, acc.name, acc_type, acc.sub_type, acc.opening_balance, acc.description or ''))
+        """, (acc.code, acc.name, acc_type, acc.sub_type, 0.0, acc.description or ''))
         conn.commit()
-        return {"status": "SUCCESS", "code": acc.code, "name": acc.name}
     finally:
         conn.close()
+
+    if opening != 0.0:
+        amt = abs(opening)
+        is_debit_normal = acc_type in ("ASSET", "EXPENSE")
+        if (is_debit_normal and opening > 0) or (not is_debit_normal and opening < 0):
+            entries = [
+                {"account_code": acc.code, "debit": amt, "credit": 0.0},
+                {"account_code": "3100", "debit": 0.0, "credit": amt},
+            ]
+        else:
+            entries = [
+                {"account_code": acc.code, "debit": 0.0, "credit": amt},
+                {"account_code": "3100", "debit": amt, "credit": 0.0},
+            ]
+        DoubleEntryEngine.post_voucher(
+            voucher_date=get_ist_now().strftime("%Y-%m-%d"),
+            narration=f"Opening balance for {acc.code} - {acc.name}",
+            entries=entries,
+            source="OPENING_BALANCE",
+        )
+
+    return {"status": "SUCCESS", "code": acc.code, "name": acc.name}
 
 @app.put("/api/accounts/{code}")
 def update_account(code: str, acc: AccountUpdateInput):
     """Updates an existing account's name, sub_type, or description."""
     from src.db.database import get_connection
     conn = get_connection()
-    cursor = conn.cursor()
     try:
+        cursor = conn.cursor()
         cursor.execute("""
         UPDATE accounts
         SET name = ?, sub_type = ?, description = ?
         WHERE code = ?;
         """, (acc.name, acc.sub_type, acc.description or '', code))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail=f"Account code {code} not found.")
         conn.commit()
         return {"status": "SUCCESS", "code": code, "name": acc.name}
     finally:
@@ -192,14 +228,16 @@ def delete_account(code: str):
     """Deletes an account if no journal vouchers are referencing it."""
     from src.db.database import get_connection
     conn = get_connection()
-    cursor = conn.cursor()
     try:
+        cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM journal_entries WHERE account_code = ?;", (code,))
         count = cursor.fetchone()[0]
         if count > 0:
             raise HTTPException(status_code=400, detail=f"Cannot delete account {code} because it has {count} active journal entries. Set balance to 0 instead.")
         
         cursor.execute("DELETE FROM accounts WHERE code = ?;", (code,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail=f"Account code {code} not found.")
         conn.commit()
         return {"status": "DELETED", "code": code}
     finally:
@@ -229,7 +267,7 @@ def get_journal(limit: int = 100):
 def post_voucher(voucher: VoucherInput):
     """Posts a new balanced double-entry journal voucher."""
     try:
-        entries_dict = [e.dict() for e in voucher.entries]
+        entries_dict = [e.model_dump() for e in voucher.entries]
         result = DoubleEntryEngine.post_voucher(
             voucher_date=voucher.voucher_date,
             narration=voucher.narration,
@@ -295,14 +333,17 @@ def get_loans():
 @app.post("/api/loans/{loan_id}")
 def update_loan(loan_id: int, loan: LoanUpdateInput):
     """Updates a loan's principal, interest rate, or accounting mode."""
-    LoanEngine.update_loan(
-        loan_id=loan_id,
-        principal=loan.principal,
-        start_date=loan.start_date,
-        rate=loan.annual_rate_pct,
-        mode=loan.mode,
-        manual_interest=loan.manual_realized_interest
-    )
+    try:
+        LoanEngine.update_loan(
+            loan_id=loan_id,
+            principal=loan.principal,
+            start_date=loan.start_date,
+            rate=loan.annual_rate_pct,
+            mode=loan.mode,
+            manual_interest=loan.manual_realized_interest
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
     return {"status": "SUCCESS", "loan_id": loan_id}
 
 # ==================== TRADING JOURNAL BRIDGE & ALERTS ====================

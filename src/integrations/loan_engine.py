@@ -19,10 +19,12 @@ class LoanEngine:
     def get_loans() -> List[Dict[str, Any]]:
         """Returns all loans with active accrued or manual liabilities."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, loan_name, account_code, principal, start_date, annual_rate_pct, mode, manual_realized_interest, monthly_emi FROM loans;")
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, loan_name, account_code, principal, start_date, annual_rate_pct, mode, manual_realized_interest, monthly_emi FROM loans;")
+            rows = cursor.fetchall()
+        finally:
+            conn.close()
 
         results = []
         today = datetime.now()
@@ -69,29 +71,40 @@ class LoanEngine:
 
     @staticmethod
     def update_loan(loan_id: int, principal: float, start_date: str, rate: float, mode: str, manual_interest: float = 0.0):
-        """Updates a loan and reconciles account 2210 on the Balance Sheet."""
+        """Updates a loan and reconciles its linked account on the Balance Sheet."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-        UPDATE loans
-        SET principal = ?, start_date = ?, annual_rate_pct = ?, mode = ?, manual_realized_interest = ?
-        WHERE id = ?;
-        """, (principal, start_date, rate, mode, manual_interest, loan_id))
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT account_code FROM loans WHERE id = ?;", (loan_id,))
+            loan_row = cursor.fetchone()
+            if not loan_row:
+                raise ValueError(f"Loan #{loan_id} not found.")
+            account_code = loan_row["account_code"]
 
-        # Compute total
-        today = datetime.now()
-        accrued = 0.0
-        if mode == "AUTO":
-            s_date = datetime.strptime(start_date, "%Y-%m-%d")
-            days = max(1, (today - s_date).days)
-            accrued = principal * (rate / 100.0) * (days / 365.25)
-        else:
-            accrued = manual_interest
+            cursor.execute("""
+            UPDATE loans
+            SET principal = ?, start_date = ?, annual_rate_pct = ?, mode = ?, manual_realized_interest = ?
+            WHERE id = ?;
+            """, (principal, start_date, rate, mode, manual_interest, loan_id))
 
-        total_liability = round(principal + accrued, 2)
-        cursor.execute("UPDATE accounts SET balance = ? WHERE code = '2210';", (total_liability,))
-        conn.commit()
-        conn.close()
+            # Compute total
+            today = datetime.now()
+            accrued = 0.0
+            if mode == "AUTO":
+                s_date = datetime.strptime(start_date, "%Y-%m-%d")
+                days = max(1, (today - s_date).days)
+                accrued = principal * (rate / 100.0) * (days / 365.25)
+            else:
+                accrued = manual_interest
 
-        logger.info(f"Loan #{loan_id} updated: Principal ₹{principal}, Liability ₹{total_liability}.")
+            total_liability = round(principal + accrued, 2)
+            cursor.execute("UPDATE accounts SET balance = ? WHERE code = ?;", (total_liability, account_code))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+        logger.info(f"Loan #{loan_id} ({account_code}) updated: Principal ₹{principal}, Liability ₹{total_liability}.")
 

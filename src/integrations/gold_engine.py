@@ -16,10 +16,12 @@ class GoldEngine:
     def get_gold_valuation() -> Dict[str, Any]:
         """Returns physical gold holding and computed net recognized valuation."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT grams, market_rate_per_gram, haircut_pct, last_updated FROM gold_holdings LIMIT 1;")
-        row = cursor.fetchone()
-        conn.close()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT grams, market_rate_per_gram, haircut_pct, last_updated FROM gold_holdings ORDER BY id ASC LIMIT 1;")
+            row = cursor.fetchone()
+        finally:
+            conn.close()
 
         if not row:
             grams = 80.0
@@ -47,29 +49,49 @@ class GoldEngine:
         }
 
     @staticmethod
-    def update_gold_holding(grams: float, rate: float) -> Dict[str, Any]:
+    def update_gold_holding(grams: float, rate: float, holding_id: int = None) -> Dict[str, Any]:
         """Updates gold holding weight or live Goodreturns market rate."""
         conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-        UPDATE gold_holdings
-        SET grams = ?, market_rate_per_gram = ?, last_updated = ?;
-        """, (grams, rate, get_utc_iso()))
+        try:
+            cursor = conn.cursor()
+            now_iso = get_utc_iso()
+            if holding_id is None:
+                cursor.execute("SELECT id FROM gold_holdings ORDER BY id ASC LIMIT 1;")
+                existing = cursor.fetchone()
+                target_id = existing["id"] if existing else None
+            else:
+                target_id = holding_id
 
-        gross = grams * rate
-        net_val = round(gross * 0.77, 2) # 23% haircut
+            if target_id is not None:
+                cursor.execute("""
+                UPDATE gold_holdings
+                SET grams = ?, market_rate_per_gram = ?, last_updated = ?
+                WHERE id = ?;
+                """, (grams, rate, now_iso, target_id))
+            else:
+                cursor.execute("""
+                INSERT INTO gold_holdings (asset_name, grams, purity, market_rate_per_gram, haircut_pct, last_updated)
+                VALUES ('22 Karat Gold Jewellery & Sovereign Bars', ?, '22K', ?, 23.0, ?);
+                """, (grams, rate, now_iso))
 
-        cursor.execute("SELECT balance FROM accounts WHERE code = '1230';")
-        old_row = cursor.fetchone()
-        old_val = float(old_row[0]) if old_row else 0.0
-        delta = round(net_val - old_val, 2)
+            gross = grams * rate
+            net_val = round(gross * 0.77, 2) # 23% haircut
 
-        # Update account 1230 in balance sheet
-        cursor.execute("UPDATE accounts SET balance = ? WHERE code = '1230';", (net_val,))
-        # Update owner's capital account 3100 to preserve double-entry equality
-        cursor.execute("UPDATE accounts SET balance = balance + ? WHERE code = '3100';", (delta,))
-        conn.commit()
-        conn.close()
+            cursor.execute("SELECT balance FROM accounts WHERE code = '1230';")
+            old_row = cursor.fetchone()
+            old_val = float(old_row[0]) if old_row else 0.0
+            delta = round(net_val - old_val, 2)
+
+            # Update account 1230 in balance sheet
+            cursor.execute("UPDATE accounts SET balance = ? WHERE code = '1230';", (net_val,))
+            # Update owner's capital account 3100 to preserve double-entry equality
+            cursor.execute("UPDATE accounts SET balance = balance + ? WHERE code = '3100';", (delta,))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
         logger.info(f"Gold holding updated: {grams}g @ ₹{rate}/g = Net Asset Value ₹{net_val}.")
         return GoldEngine.get_gold_valuation()

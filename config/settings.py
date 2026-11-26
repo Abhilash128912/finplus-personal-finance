@@ -19,7 +19,7 @@ SERVER_PORT = int(os.getenv("PORT", 8004))
 SERVER_HOST = "127.0.0.1"
 
 # Trading Journal (App #4) SQLite path for local real-trade bridge
-JOURNAL_DB_PATH = Path(r"D:\AI_APPS\finplus_trading_journal\data\journal.db")
+JOURNAL_DB_PATH = Path(os.getenv("JOURNAL_DB_PATH", r"D:\AI_APPS\finplus_trading_journal\data\journal.db"))
 
 # NTFY configuration
 NTFY_TOPIC = os.getenv("FINPLUS_NTFY_TOPIC", "finplus_wealth_alerts_2026")

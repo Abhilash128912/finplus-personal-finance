@@ -37,13 +37,15 @@ class FinanceNTFYDispatcher:
                     logger.info(f"NTFY push alert delivered: {title}")
                     # Save to database log
                     conn = get_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                    INSERT INTO daily_alerts (title, message, category, dispatched_at)
-                    VALUES (?, ?, ?, ?);
-                    """, (title, message, category, get_utc_iso()))
-                    conn.commit()
-                    conn.close()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                        INSERT INTO daily_alerts (title, message, category, dispatched_at)
+                        VALUES (?, ?, ?, ?);
+                        """, (title, message, category, get_utc_iso()))
+                        conn.commit()
+                    finally:
+                        conn.close()
                     return True
         except Exception as e:
             logger.error(f"Failed to dispatch NTFY notification: {e}")

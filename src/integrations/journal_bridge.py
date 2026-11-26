@@ -35,6 +35,8 @@ class JournalBridge:
                 "trading_margin": 0.0
             }
 
+        j_conn = None
+        conn = None
         try:
             # Connect to App #4 journal.db read-only
             j_conn = sqlite3.connect(f"file:{JOURNAL_DB_PATH}?mode=ro", uri=True, timeout=5.0)
@@ -67,8 +69,6 @@ class JournalBridge:
             except Exception:
                 pass
 
-            j_conn.close()
-
             # Reconcile into App #5 accounts
             conn = get_connection()
             f_cursor = conn.cursor()
@@ -82,7 +82,6 @@ class JournalBridge:
                 f_cursor.execute("UPDATE accounts SET balance = ? WHERE code = '4210';", (total_net_pnl,))
 
             conn.commit()
-            conn.close()
 
             logger.info(f"Journal Bridge Sync Complete: {total_real} REAL trades synced. Net P&L: ₹{total_net_pnl}, Margin: ₹{margin}.")
             return {
@@ -102,4 +101,12 @@ class JournalBridge:
                 "error": str(e),
                 "trading_margin": 0.0
             }
+        finally:
+            if j_conn is not None:
+                try:
+                    j_conn.close()
+                except Exception:
+                    pass
+            if conn is not None:
+                conn.close()
 
